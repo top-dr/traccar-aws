@@ -5,61 +5,60 @@
     LETSENCRYPT: "{{ lookup('env','TC_LETSENCRYPT') }}"
 
   tasks:
+    # Traccar container
+    - name: Create /opt/traccar
+      become: true
+      file:
+        path: "/opt/traccar"
+        state: directory
+        mode: 0755
+        owner: root
+        group: root
 
-  # Traccar container
-  - name: Create /opt/traccar
-    become: true
-    file:
-      path: "/opt/traccar"
-      state: directory
-      mode: 0755
-      owner: root
-      group: root
+    - name: Copy mytraccar.xml
+      become: true
+      copy:
+        src: "mytraccar.xml"
+        dest: "/opt/traccar/mytraccar.xml"
+        mode: 0644
+        owner: root
+        group: root
+        force: yes
 
-  - name: Copy mytraccar.xml
-    become: true
-    copy:
-      src: "mytraccar.xml"
-      dest:  "/opt/traccar/mytraccar.xml"
-      mode: 0644
-      owner: root
-      group: root
-      force: yes
+    - name: Start traccar container (port 8082)
+      become: yes
+      docker_container:
+        name: traccar
+        image: traccar/traccar
+        state: started
+        recreate: yes
+        restart_policy: always
+        networks:
+          - name: traccar
+        networks_cli_compatible: yes
+        ports:
+          - 8082:8082
+          - 5000-5150:5000-5150
+          - 5000-5150:5000-5150/udp
+        volumes:
+          - /opt/traccar/mytraccar.xml:/opt/traccar/conf/traccar.xml
+      when: LETSENCRYPT == 'true'
 
-  - name: Start traccar container (port 8082)
-    become: yes
-    docker_container:
-      name: traccar
-      image: traccar/traccar:4.8
-      state: started
-      recreate: yes
-      restart_policy: always
-      networks:
-        - name: traccar
-      networks_cli_compatible: yes
-      ports:
-        - 8082:8082
-        - 5000-5150:5000-5150
-        - 5000-5150:5000-5150/udp
-      volumes:
-        - /opt/traccar/mytraccar.xml:/opt/traccar/conf/traccar.xml
-    when: LETSENCRYPT == 'true'
-
-  - name: Start traccar container (port 80)
-    become: yes
-    docker_container:
-      name: traccar
-      image: traccar/traccar:4.8
-      state: started
-      recreate: yes
-      restart_policy: always
-      networks:
-        - name: traccar
-      networks_cli_compatible: yes
-      ports:
-        - 80:8082
-        - 5000-5150:5000-5150
-        - 5000-5150:5000-5150/udp
-      volumes:
-        - /opt/traccar/mytraccar.xml:/opt/traccar/conf/traccar.xml
-    when: LETSENCRYPT == 'false'
+    - name: Start traccar container (port 80)
+      become: yes
+      docker_container:
+        name: traccar
+        image: traccar/traccar
+        state: started
+        recreate: yes
+        restart_policy: always
+        networks:
+          - name: traccar
+        networks_cli_compatible: yes
+        ports:
+          - 80:8082
+          - 5000-5150:5000-5150
+          - 5000-5150:5000-5150/udp
+        volumes:
+          - /opt/traccar/mytraccar.xml:/opt/traccar/conf/traccar.xml
+      when: LETSENCRYPT == 'false'
